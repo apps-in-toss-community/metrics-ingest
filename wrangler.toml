@@ -1,0 +1,59 @@
+# metrics-ingest — wrangler configuration
+#
+# Two environments: staging (verification) and production (public).
+# D1 / KV IDs are filled in after `wrangler d1 create` and `wrangler kv namespace create`
+# during the provisioning PR.
+
+name = "metrics-ingest"
+main = "src/index.ts"
+compatibility_date = "2026-05-11"
+
+# No top-level bindings — all per-env below.
+
+# ---------------------------------------------------------------------------
+# staging environment — t-staging.aitc.dev
+# ---------------------------------------------------------------------------
+[env.staging]
+routes = [
+  { pattern = "t-staging.aitc.dev", custom_domain = true },
+]
+
+[env.staging.vars]
+TS_SKEW_MS = "86400000"     # 24h
+RETENTION_DAYS = "90"
+
+[env.staging.triggers]
+crons = ["0 3 * * *"]
+
+[[env.staging.d1_databases]]
+binding = "EVENTS_DB"
+database_name = "aitc-metrics-staging"
+database_id = "REPLACE_ME_STAGING_D1_ID"
+
+[[env.staging.kv_namespaces]]
+binding = "RATELIMIT_KV"
+id = "REPLACE_ME_STAGING_KV_ID"
+
+# ---------------------------------------------------------------------------
+# production environment — t.aitc.dev
+# ---------------------------------------------------------------------------
+[env.production]
+routes = [
+  { pattern = "t.aitc.dev", custom_domain = true },
+]
+
+[env.production.vars]
+TS_SKEW_MS = "86400000"
+RETENTION_DAYS = "90"
+
+[env.production.triggers]
+crons = ["0 3 * * *"]
+
+[[env.production.d1_databases]]
+binding = "EVENTS_DB"
+database_name = "aitc-metrics"
+database_id = "REPLACE_ME_PRODUCTION_D1_ID"
+
+[[env.production.kv_namespaces]]
+binding = "RATELIMIT_KV"
+id = "REPLACE_ME_PRODUCTION_KV_ID"

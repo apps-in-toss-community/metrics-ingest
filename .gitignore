@@ -141,3 +141,14 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Cloudflare Workers local state
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+
+# Claude Code
+.claude/settings.local.json
+.claude/*.lock
+.claude.lock
