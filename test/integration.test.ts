@@ -198,3 +198,37 @@ describe('scheduled (cron retention sweep)', () => {
     expect(db.rows.map((r) => r.anon_id).sort()).toEqual(['b', 'c']);
   });
 });
+
+describe('CORS', () => {
+  it('responds to OPTIONS preflight on /e with permissive headers', async () => {
+    const res = await fetchApp('http://t.local/e', {
+      method: 'OPTIONS',
+      headers: {
+        Origin: 'http://app.example',
+        'Access-Control-Request-Method': 'POST',
+        'Access-Control-Request-Headers': 'content-type',
+      },
+    });
+    expect(res.status).toBe(204);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+    const allowMethods = res.headers.get('access-control-allow-methods') ?? '';
+    expect(allowMethods).toContain('POST');
+    expect(allowMethods).toContain('DELETE');
+    expect(res.headers.get('access-control-allow-headers')).toContain('content-type');
+  });
+
+  it('echoes Access-Control-Allow-Origin on POST /e', async () => {
+    const res = await postEvent(makeEvent());
+    expect(res.status).toBe(202);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('echoes Access-Control-Allow-Origin on DELETE /e', async () => {
+    const res = await fetchApp('http://t.local/e?anon_id=00000000-0000-4000-8000-000000000000', {
+      method: 'DELETE',
+      headers: { 'CF-Connecting-IP': '203.0.113.9' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+});
