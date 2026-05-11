@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import type { Env } from './lib/env.js';
 import { deleteRoute } from './routes/delete.js';
 import { healthRoute } from './routes/health.js';
@@ -8,6 +9,19 @@ const DEFAULT_RETENTION_DAYS = 90;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 const app = new Hono<{ Bindings: Env }>();
+
+// devtools (and future tools) run in arbitrary user origins — every
+// mini-app dev's localhost / production host. We don't gate by Origin
+// because the auth model is per-anon_id, not per-origin.
+app.use(
+  '/e',
+  cors({
+    origin: '*',
+    allowMethods: ['POST', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['content-type'],
+    maxAge: 86400,
+  }),
+);
 
 app.route('/health', healthRoute);
 // POST /e and DELETE /e share the same path; Hono dispatches by method.

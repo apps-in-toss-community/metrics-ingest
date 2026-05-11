@@ -1,4 +1,5 @@
 import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import type { Env } from '../src/lib/env.js';
 import { deleteRoute } from '../src/routes/delete.js';
 import { healthRoute } from '../src/routes/health.js';
@@ -116,6 +117,15 @@ export class FakeKV {
 
 export function buildApp(env: Env) {
   const app = new Hono<{ Bindings: Env }>();
+  app.use(
+    '/e',
+    cors({
+      origin: '*',
+      allowMethods: ['POST', 'DELETE', 'OPTIONS'],
+      allowHeaders: ['content-type'],
+      maxAge: 86400,
+    }),
+  );
   app.route('/health', healthRoute);
   app.route('/e', ingestRoute);
   app.route('/e', deleteRoute);
