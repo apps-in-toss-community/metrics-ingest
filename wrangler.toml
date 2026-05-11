@@ -28,11 +28,11 @@ crons = ["0 3 * * *"]
 [[env.staging.d1_databases]]
 binding = "EVENTS_DB"
 database_name = "aitc-metrics-staging"
-database_id = "REPLACE_ME_STAGING_D1_ID"
+database_id = "a67fa33f-f678-4c2c-aa40-88c8382b9605"
 
 [[env.staging.kv_namespaces]]
 binding = "RATELIMIT_KV"
-id = "REPLACE_ME_STAGING_KV_ID"
+id = "8fdfd6c07c254e10aaea4d325441f089"
 
 # ---------------------------------------------------------------------------
 # production environment — t.aitc.dev
@@ -52,8 +52,8 @@ crons = ["0 3 * * *"]
 [[env.production.d1_databases]]
 binding = "EVENTS_DB"
 database_name = "aitc-metrics"
-database_id = "REPLACE_ME_PRODUCTION_D1_ID"
+database_id = "a330e02d-8726-4049-8f5b-bc77cfcb4c07"
 
 [[env.production.kv_namespaces]]
 binding = "RATELIMIT_KV"
-id = "REPLACE_ME_PRODUCTION_KV_ID"
+id = "54253b7fde5141bcb9c583f69312e891"
