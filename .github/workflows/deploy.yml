@@ -1,0 +1,96 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target environment'
+        required: true
+        type: choice
+        options:
+          - production
+        default: production
+
+concurrency:
+  group: deploy-${{ github.workflow }}-${{ github.event.inputs.environment || 'staging' }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-staging:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://t-staging.aitc.dev/health
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env staging
+
+      - name: Smoke-test /health
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 12); do
+            if curl -fsS https://t-staging.aitc.dev/health; then
+              echo
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "staging /health never came up" >&2
+          exit 1
+
+  deploy-production:
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://t.aitc.dev/health
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy --env production
+
+      - name: Smoke-test /health
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 12); do
+            if curl -fsS https://t.aitc.dev/health; then
+              echo
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "production /health never came up" >&2
+          exit 1
