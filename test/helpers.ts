@@ -4,13 +4,13 @@ import type { Env } from '../src/lib/env.js';
 import { deleteRoute } from '../src/routes/delete.js';
 import { healthRoute } from '../src/routes/health.js';
 import { ingestRoute } from '../src/routes/ingest.js';
+import { statsRoute } from '../src/routes/stats.js';
 
-// Minimal in-memory fakes for D1 and KV. We deliberately avoid pulling in
-// miniflare's full runtime: the routes only exercise three SQL statements
-// (insert event, delete by anon_id, delete by ts cutoff) and the standard
-// KV `get`/`put` shape, so stubbing them keeps the test suite fast and
-// deterministic. The real CF runtime is exercised by `wrangler dev` and
-// the staging deploy — this layer is for the route logic.
+// miniflare's full runtime: the routes only exercise a handful of SQL
+// statements (insert event, delete by anon_id, delete by ts cutoff, daily
+// count) and the standard KV `get`/`put` shape, so stubbing them keeps the
+// test suite fast and deterministic. The real CF runtime is exercised by
+// `wrangler dev` and the staging deploy — this layer is for the route logic.
 
 export interface EventRow {
   source: string;
@@ -94,7 +94,13 @@ class FakeStatement {
     throw new Error('not implemented');
   }
   async first<T = unknown>(): Promise<T | null> {
-    throw new Error('not implemented');
+    const normalized = this.sql.replace(/\s+/g, ' ').trim();
+    if (normalized === 'SELECT COUNT(*) AS cnt FROM events WHERE ts >= ? AND ts < ?') {
+      const [from, to] = this.bindings as [number, number];
+      const cnt = this.db.rows.filter((r) => r.ts >= from && r.ts < to).length;
+      return { cnt } as T;
+    }
+    throw new Error(`FakeD1: unhandled first() SQL ${normalized}`);
   }
   async raw<T = unknown>(): Promise<T[]> {
     throw new Error('not implemented');
@@ -129,6 +135,7 @@ export function buildApp(env: Env) {
   app.route('/health', healthRoute);
   app.route('/e', ingestRoute);
   app.route('/e', deleteRoute);
+  app.route('/stats', statsRoute);
   // Inject env on every request — Hono's app.request doesn't expose a
   // dispatcher with bindings, so we attach via fetch wrapper.
   return async (input: string, init?: RequestInit) => app.fetch(new Request(input, init), env);
