@@ -27,7 +27,7 @@
 | 국가 | Cloudflare `cf.country` 2-letter code만 |
 | 보존 기간 | 90일. 매일 03:00 UTC cron이 `ts < now - 90d` row DELETE |
 | 삭제 요청 | `DELETE /e?anon_id=<uuid>` 사용자가 패널에서 직접 호출 가능 |
-| Rate limit | 60 req/min per IP (KV `rl:<ip>:<minute-bucket>`, TTL 60s) |
+| Rate limit | 60 req/min per IP. Backend: `RATE_LIMIT_BACKEND=kv` (default, eventual consistency) or `d1` (atomic UPSERT, strong consistency). KV default kept; staging validates D1 before production switch. |
 | `source` allowlist | 현재 `['devtools']`. 새 도구 추가는 별도 PR로 allowlist 확장 |
 | 일일 row-count 모니터링 | 같은 03:00 UTC cron이 당일(UTC) row 수 집계 → KV `abuse:history`에 14일 rolling 저장. `DAILY_ROW_THRESHOLD` (staging 5k / prod 50k) 초과 시 `console.error` + 선택적 webhook POST (`ABUSE_ALERT_WEBHOOK`). 개수·날짜만 — PII 없음 |
 | 집계 공개 | `GET /stats` — 마지막 `DailyStats` 스냅샷(개수, 날짜, threshold, 14일 history)을 인증 없이 read-only 노출. cron 미실행 시 503. Grafana 대시보드의 경량 대안 |

@@ -6,11 +6,13 @@ import { healthRoute } from '../src/routes/health.js';
 import { ingestRoute } from '../src/routes/ingest.js';
 import { statsRoute } from '../src/routes/stats.js';
 
+// Minimal in-memory fakes for D1 and KV. We deliberately avoid pulling in
 // miniflare's full runtime: the routes only exercise a handful of SQL
-// statements (insert event, delete by anon_id, delete by ts cutoff, daily
-// count) and the standard KV `get`/`put` shape, so stubbing them keeps the
-// test suite fast and deterministic. The real CF runtime is exercised by
-// `wrangler dev` and the staging deploy — this layer is for the route logic.
+// statements (insert event, delete by anon_id, delete by ts cutoff,
+// rate-limit upsert, daily count) and the standard KV `get`/`put` shape, so
+// stubbing them keeps the test suite fast and deterministic. The real CF
+// runtime is exercised by `wrangler dev` and the staging deploy — this layer
+// is for the route logic.
 
 export interface EventRow {
   source: string;
@@ -22,8 +24,15 @@ export interface EventRow {
   meta: string | null;
 }
 
+export interface RateLimitRow {
+  ip_bucket: string;
+  count: number;
+  expires: number;
+}
+
 export class FakeD1 implements D1Database {
   readonly rows: EventRow[] = [];
+  readonly rateLimitRows: RateLimitRow[] = [];
 
   prepare(sql: string): D1PreparedStatement {
     return new FakeStatement(this, sql) as unknown as D1PreparedStatement;
@@ -93,15 +102,37 @@ class FakeStatement {
   async all<T = unknown>(): Promise<D1Result<T>> {
     throw new Error('not implemented');
   }
+
+  /**
+   * Handles two `first()` SQL patterns:
+   *
+   * 1. D1 rate-limit atomic upsert (RETURNING count):
+   *    INSERT INTO rate_limit ... ON CONFLICT ... RETURNING count
+   *
+   * 2. Anti-abuse daily count query:
+   *    SELECT COUNT(*) AS cnt FROM events WHERE ts >= ? AND ts < ?
+   */
   async first<T = unknown>(): Promise<T | null> {
     const normalized = this.sql.replace(/\s+/g, ' ').trim();
+    if (normalized.startsWith('INSERT INTO rate_limit')) {
+      const [ipBucket, expires] = this.bindings as [string, number];
+      const existing = this.db.rateLimitRows.find((r) => r.ip_bucket === ipBucket);
+      if (existing) {
+        existing.count += 1;
+        return { count: existing.count } as T;
+      }
+      const row: RateLimitRow = { ip_bucket: ipBucket, count: 1, expires };
+      this.db.rateLimitRows.push(row);
+      return { count: 1 } as T;
+    }
     if (normalized === 'SELECT COUNT(*) AS cnt FROM events WHERE ts >= ? AND ts < ?') {
       const [from, to] = this.bindings as [number, number];
       const cnt = this.db.rows.filter((r) => r.ts >= from && r.ts < to).length;
       return { cnt } as T;
     }
-    throw new Error(`FakeD1: unhandled first() SQL ${normalized}`);
+    throw new Error(`FakeD1.first: unhandled SQL ${normalized}`);
   }
+
   async raw<T = unknown>(): Promise<T[]> {
     throw new Error('not implemented');
   }
@@ -110,10 +141,14 @@ class FakeStatement {
 export class FakeKV {
   private readonly store = new Map<string, string>();
 
+  get size(): number {
+    return this.store.size;
+  }
+
   async get(key: string): Promise<string | null> {
     return this.store.get(key) ?? null;
   }
-  async put(key: string, value: string): Promise<void> {
+  async put(key: string, value: string, _options?: { expirationTtl?: number }): Promise<void> {
     this.store.set(key, value);
   }
   async delete(key: string): Promise<void> {
