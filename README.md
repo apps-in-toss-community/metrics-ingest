@@ -49,8 +49,11 @@ Privacy details, including how to disable telemetry and how to request deletion 
 | `POST` | `/e` | Ingest one event |
 | `DELETE` | `/e?anon_id=<uuid>` | Delete all events for an anon_id |
 | `GET` | `/health` | Liveness probe |
+| `GET` | `/stats` | Read-only daily summary (counts and dates only — no auth, no PII). `503` until the daily cron has run at least once. |
 
-Rate-limited to 60 requests/minute per IP (KV-backed).
+`POST`/`DELETE /e` are rate-limited to 60 requests/minute per IP (KV-backed).
+
+A daily cron (03:00 UTC) sweeps rows older than the retention window and records that day's row count in a rolling 14-day history; if the count exceeds `DAILY_ROW_THRESHOLD` it logs an error and (optionally) POSTs to `ABUSE_ALERT_WEBHOOK`. The latest summary is what `GET /stats` returns.
 
 ## Stack
 
