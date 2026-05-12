@@ -21,6 +21,7 @@ routes = [
 [env.staging.vars]
 TS_SKEW_MS = "86400000"     # 24h
 RETENTION_DAYS = "90"
+DAILY_ROW_THRESHOLD = "5000"   # alert if staging receives > 5k events/day
 
 [env.staging.triggers]
 crons = ["0 3 * * *"]
@@ -45,6 +46,8 @@ routes = [
 [env.production.vars]
 TS_SKEW_MS = "86400000"
 RETENTION_DAYS = "90"
+DAILY_ROW_THRESHOLD = "50000"  # alert if production receives > 50k events/day
+# ABUSE_ALERT_WEBHOOK = "https://..."  # set via `wrangler secret put` if needed
 
 [env.production.triggers]
 crons = ["0 3 * * *"]
