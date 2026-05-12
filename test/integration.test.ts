@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import worker from '../src/index.js';
 import type { Env } from '../src/lib/env.js';
-import { RATE_LIMIT_PER_MINUTE } from '../src/lib/ratelimit.js';
+import { checkRateLimitD1, RATE_LIMIT_PER_MINUTE } from '../src/lib/ratelimit.js';
 import { buildApp, FakeD1, FakeKV, makeEvent } from './helpers.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -196,6 +196,95 @@ describe('scheduled (cron retention sweep)', () => {
 
     expect(db.rows).toHaveLength(2);
     expect(db.rows.map((r) => r.anon_id).sort()).toEqual(['b', 'c']);
+  });
+});
+
+describe('D1 rate-limit backend', () => {
+  it('counts correctly under sequential requests', async () => {
+    const fakeDb = new FakeD1();
+    const ip = '198.51.100.1';
+    const now = Date.now();
+
+    for (let i = 0; i < RATE_LIMIT_PER_MINUTE; i++) {
+      const result = await checkRateLimitD1(fakeDb as unknown as D1Database, ip, now);
+      expect(result.ok).toBe(true);
+      expect(result.remaining).toBe(RATE_LIMIT_PER_MINUTE - (i + 1));
+    }
+
+    // 61st request must be rejected.
+    const overflow = await checkRateLimitD1(fakeDb as unknown as D1Database, ip, now);
+    expect(overflow.ok).toBe(false);
+    expect(overflow.remaining).toBe(0);
+  });
+
+  it('simulates parallel requests: all see accurate running total', async () => {
+    const fakeDb = new FakeD1();
+    const ip = '198.51.100.2';
+    const now = Date.now();
+    const PARALLEL = 100;
+
+    // Fire all 100 calls "at once" via Promise.all — the FakeD1 increments
+    // synchronously inside async wrappers, so this exercises the counting
+    // path without race conditions in the fake (mirrors the D1 server-side
+    // serial write behaviour).
+    const results = await Promise.all(
+      Array.from({ length: PARALLEL }, () =>
+        checkRateLimitD1(fakeDb as unknown as D1Database, ip, now),
+      ),
+    );
+
+    const accepted = results.filter((r) => r.ok).length;
+    const rejected = results.filter((r) => !r.ok).length;
+
+    // Exactly LIMIT requests should be accepted; the rest rejected.
+    expect(accepted).toBe(RATE_LIMIT_PER_MINUTE);
+    expect(rejected).toBe(PARALLEL - RATE_LIMIT_PER_MINUTE);
+  });
+
+  it('isolates buckets per IP', async () => {
+    const fakeDb = new FakeD1();
+    const now = Date.now();
+    const ipA = '198.51.100.10';
+    const ipB = '198.51.100.11';
+
+    // Exhaust ipA.
+    for (let i = 0; i < RATE_LIMIT_PER_MINUTE; i++) {
+      await checkRateLimitD1(fakeDb as unknown as D1Database, ipA, now);
+    }
+    const aOverflow = await checkRateLimitD1(fakeDb as unknown as D1Database, ipA, now);
+    const bOk = await checkRateLimitD1(fakeDb as unknown as D1Database, ipB, now);
+
+    expect(aOverflow.ok).toBe(false);
+    expect(bOk.ok).toBe(true);
+  });
+
+  it('uses D1 backend end-to-end when RATE_LIMIT_BACKEND=d1', async () => {
+    const d1Db = new FakeD1();
+    const kvStore = new FakeKV();
+    const d1Env: Env = {
+      EVENTS_DB: d1Db as unknown as D1Database,
+      RATELIMIT_KV: kvStore as unknown as KVNamespace,
+      RATE_LIMIT_BACKEND: 'd1',
+    };
+    const fetch = buildApp(d1Env);
+    const ip = '198.51.100.20';
+
+    for (let i = 0; i < RATE_LIMIT_PER_MINUTE; i++) {
+      const res = await fetch('http://t.local/e', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', 'CF-Connecting-IP': ip },
+        body: JSON.stringify(makeEvent()),
+      });
+      expect(res.status).toBe(202);
+    }
+    const overflow = await fetch('http://t.local/e', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'CF-Connecting-IP': ip },
+      body: JSON.stringify(makeEvent()),
+    });
+    expect(overflow.status).toBe(429);
+    // KV store must be untouched when D1 backend is active.
+    expect(kvStore.size).toBe(0);
   });
 });
 
