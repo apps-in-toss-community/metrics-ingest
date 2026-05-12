@@ -48,6 +48,7 @@ routes = [
 TS_SKEW_MS = "86400000"
 RETENTION_DAYS = "90"
 DAILY_ROW_THRESHOLD = "50000"  # alert if production receives > 50k events/day
+RATE_LIMIT_BACKEND = "d1"      # D1 atomic UPSERT — validated on staging 2026-05-13 (PR #5)
 # ABUSE_ALERT_WEBHOOK = "https://..."  # set via `wrangler secret put` if needed
 
 [env.production.triggers]
