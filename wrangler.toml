@@ -22,6 +22,7 @@ routes = [
 TS_SKEW_MS = "86400000"     # 24h
 RETENTION_DAYS = "90"
 DAILY_ROW_THRESHOLD = "5000"   # alert if staging receives > 5k events/day
+RATE_LIMIT_BACKEND = "d1"      # validate D1 atomic UPSERT path on staging before prod
 
 [env.staging.triggers]
 crons = ["0 3 * * *"]
