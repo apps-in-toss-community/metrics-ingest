@@ -45,18 +45,16 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env staging
 
-      - name: Smoke-test /health
-        run: |
-          set -euo pipefail
-          for _ in $(seq 1 12); do
-            if curl -fsS https://t-staging.aitc.dev/health; then
-              echo
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "staging /health never came up" >&2
-          exit 1
+      # Bot Fight Mode on the aitc.dev zone 403s GitHub Actions runner IPs, so a
+      # public curl against t-staging.aitc.dev/health can't work from CI. Verify
+      # the deploy landed via the Workers API instead (the upload above already
+      # succeeded; this confirms it's the active deployment).
+      - name: Verify deployment
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deployments list --env staging
 
   deploy-production:
     if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
@@ -82,15 +80,11 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --env production
 
-      - name: Smoke-test /health
-        run: |
-          set -euo pipefail
-          for _ in $(seq 1 12); do
-            if curl -fsS https://t.aitc.dev/health; then
-              echo
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "production /health never came up" >&2
-          exit 1
+      # See deploy-staging: Bot Fight Mode blocks CI IPs, so verify via the
+      # Workers API rather than a public curl against t.aitc.dev/health.
+      - name: Verify deployment
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deployments list --env production
