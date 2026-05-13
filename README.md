@@ -97,4 +97,4 @@ BSD-3-Clause. See [LICENSE](./LICENSE).
 
 ---
 
-Community project. Not affiliated with Toss.
+Community open-source project.
