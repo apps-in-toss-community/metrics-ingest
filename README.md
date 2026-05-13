@@ -2,8 +2,6 @@
 
 Anonymous, **opt-in** usage telemetry endpoint for [apps-in-toss-community](https://github.com/apps-in-toss-community) dev tools.
 
-This is a community project. Not affiliated with or endorsed by Toss.
-
 ## What this is
 
 A Cloudflare Workers + D1 service that accepts small, structured events from community-built dev tools (currently `@ait-co/devtools`). It exists to answer one question: **how actively are people using our tools?** — so we know when the surface is mature enough for a `1.0.0` stability commitment.
@@ -96,3 +94,7 @@ pnpm deploy:production
 ## License
 
 BSD-3-Clause. See [LICENSE](./LICENSE).
+
+---
+
+Community project. Not affiliated with Toss.
