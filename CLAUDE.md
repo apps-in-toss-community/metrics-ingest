@@ -25,14 +25,16 @@
 
 | 항목 | 정책 |
 |---|---|
-| 식별자 | `anon_id` (브라우저 localStorage random UUID v4). cookie 아님. |
+| 식별자 (Tier 0) | 서버 생성 — IP+UA daily hash. DB에 저장 안 함. sentinel `'tier0'` 을 `anon_id` 컬럼에 기록 |
+| 식별자 (Tier 1) | `anon_id` (브라우저 localStorage random UUID v4). cookie 아님. |
 | 저장하지 않는 것 | IP, User-Agent, mock 인자, 사용자 코드 |
-| `meta` 컬럼 | 도구별 자유 JSON. `JSON.stringify(meta).length ≤ 256` (Worker에서 cap) |
-| 국가 | Cloudflare `cf.country` 2-letter code만 |
+| `meta` 컬럼 | Tier 1 전용. 도구별 자유 JSON. `JSON.stringify(meta).length ≤ 256` (Worker에서 cap). Tier 0는 `meta` 없음 |
+| 국가 | Cloudflare `cf.country` 2-letter code만 (Tier 0 / Tier 1 모두) |
 | 보존 기간 | 90일. 매일 03:00 UTC cron이 `ts < now - 90d` row DELETE |
-| 삭제 요청 | `DELETE /e?anon_id=<uuid>` 사용자가 패널에서 직접 호출 가능 |
+| 삭제 요청 | `DELETE /e?anon_id=<uuid>` 사용자가 패널에서 직접 호출 가능 (Tier 1만 해당). Tier 0는 저장 식별자 없어 삭제 불필요 |
 | Rate limit | 60 req/min per IP. Backend: `RATE_LIMIT_BACKEND=kv` (default, eventual consistency) or `d1` (atomic UPSERT, strong consistency). KV default kept; staging validates D1 before production switch. |
-| `source` allowlist | 현재 `['devtools']`. 새 도구 추가는 별도 PR로 allowlist 확장 |
+| Tier 0 dedupe | KV `t0:<source>:<16-char-hash>:<YYYY-MM-DD>` 36h TTL. 하루 1회만 DB write. `RATELIMIT_KV` 재사용 (`t0:` prefix로 충돌 회피) |
+| `source` allowlist | `['devtools', 'console-cli', 'agent-plugin']`. 새 도구 추가는 별도 PR로 allowlist 확장 |
 | 일일 row-count 모니터링 | 같은 03:00 UTC cron이 당일(UTC) row 수 집계 → KV `abuse:history`에 14일 rolling 저장. `DAILY_ROW_THRESHOLD` (staging 5k / prod 50k) 초과 시 `console.error` + 선택적 webhook POST (`ABUSE_ALERT_WEBHOOK`). 개수·날짜만 — PII 없음 |
 | 집계 공개 | `GET /stats` — 마지막 `DailyStats` 스냅샷(개수, 날짜, threshold, 14일 history)을 인증 없이 read-only 노출. cron 미실행 시 503. Grafana 대시보드의 경량 대안 |
 

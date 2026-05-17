@@ -14,4 +14,8 @@ export interface Env {
   DAILY_ROW_THRESHOLD?: string;
   // Optional webhook URL the anti-abuse check POSTs to when the threshold trips.
   ABUSE_ALERT_WEBHOOK?: string;
+  // Base secret for Tier 0 daily-salt derivation: sha256(TIER0_SECRET_BASE + dateUtc).
+  // The per-day salt is derived from this; it is never stored or transmitted.
+  // Register via `wrangler secret put TIER0_SECRET_BASE --env <staging|production>`.
+  TIER0_SECRET_BASE?: string;
 }
