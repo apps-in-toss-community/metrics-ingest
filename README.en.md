@@ -6,7 +6,7 @@ Anonymous, **opt-in** usage telemetry endpoint for [apps-in-toss-community](http
 
 ## What this is
 
-A Cloudflare Workers + D1 service that accepts small, structured events from community-built dev tools (currently `@ait-co/devtools`). It exists to answer one question: **how actively are people using our tools?** — so we know when the surface is mature enough for a `1.0.0` stability commitment.
+A Cloudflare Workers + D1 service that accepts small, structured events from community-built dev tools (`@ait-co/devtools`, `@ait-co/console-cli`). It exists to answer one question: **how actively are people using our tools?** — so we know when the surface is mature enough for a `1.0.0` stability commitment.
 
 ## What we collect
 
@@ -29,6 +29,17 @@ Events are kept for **90 days**, then deleted by a daily cron.
 
 The full schema and policy are visible in this repository's source code (`src/`, `migrations/`).
 
+### Allowed events per source
+
+| source | event | meta |
+|---|---|---|
+| `devtools` | `panel_mount` | — |
+| `devtools` | `panel_open` | — |
+| `devtools` | `tab_view` | — |
+| `devtools` | `session_duration` | — |
+| `console-cli` | `cli_invoked` | `{command: string}` |
+| `console-cli` | `cli_install` | `{platform: string, arch: string}` |
+
 ## What we do *not* collect
 
 - No IP addresses
@@ -38,7 +49,7 @@ The full schema and policy are visible in this repository's source code (`src/`,
 
 ## Consent
 
-The client (`@ait-co/devtools`) is **opt-in**: telemetry is off until the user explicitly accepts. Users are prompted at most twice (initial + one reprompt after 30 days), then never again. Users can toggle telemetry from the devtools panel at any time.
+Clients (`@ait-co/devtools`, `@ait-co/console-cli`) are **opt-in**: telemetry is off until the user explicitly accepts. Users are prompted at most twice (initial + one reprompt after 30 days), then never again. Users can toggle telemetry from the devtools panel at any time.
 
 Privacy details, including how to disable telemetry and how to request deletion of your anon_id, are published at <https://docs.aitc.dev/privacy>.
 

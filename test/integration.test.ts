@@ -43,7 +43,7 @@ describe('POST /e', () => {
   });
 
   it('rejects unknown source with 400 invalid_payload', async () => {
-    const res = await postEvent(makeEvent({ source: 'console-cli' }));
+    const res = await postEvent(makeEvent({ source: 'unknown-source' }));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'invalid_payload' });
     expect(db.rows).toHaveLength(0);
@@ -53,6 +53,37 @@ describe('POST /e', () => {
     const res = await postEvent(makeEvent({ event: 'some_other_event' }));
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({ error: 'invalid_payload' });
+  });
+
+  it('accepts console-cli cli_invoked event', async () => {
+    const res = await postEvent(
+      makeEvent({ source: 'console-cli', event: 'cli_invoked', meta: { command: 'app list' } }),
+    );
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+    expect(db.rows[0]).toMatchObject({ source: 'console-cli', event: 'cli_invoked' });
+  });
+
+  it('accepts console-cli cli_install event', async () => {
+    const res = await postEvent(
+      makeEvent({
+        source: 'console-cli',
+        event: 'cli_install',
+        meta: { platform: 'darwin', arch: 'arm64' },
+      }),
+    );
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+    expect(db.rows[0]).toMatchObject({ source: 'console-cli', event: 'cli_install' });
+  });
+
+  it('rejects console-cli event not in its allowlist', async () => {
+    const res = await postEvent(makeEvent({ source: 'console-cli', event: 'unknown_event' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_payload' });
+    expect(db.rows).toHaveLength(0);
   });
 
   it('rejects meta payloads exceeding 256 bytes', async () => {

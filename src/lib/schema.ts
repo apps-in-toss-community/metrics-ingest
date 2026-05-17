@@ -1,13 +1,14 @@
 import { z } from 'zod';
 
 // New sources are added by extending this set + a privacy-doc PR.
-export const SOURCES = ['devtools'] as const;
+export const SOURCES = ['devtools', 'console-cli'] as const;
 export type Source = (typeof SOURCES)[number];
 
 // Per-source event allowlist. Keep events scoped: tab labels go in `meta`,
 // not as new event names. Adding events is cheaper than adding sources.
 export const EVENTS_BY_SOURCE: Record<Source, ReadonlyArray<string>> = {
   devtools: ['panel_mount', 'panel_open', 'tab_view', 'session_duration'],
+  'console-cli': ['cli_invoked', 'cli_install'],
 };
 
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
