@@ -22,6 +22,7 @@ export interface EventRow {
   ts: number;
   country: string | null;
   meta: string | null;
+  tier: number;
 }
 
 export interface RateLimitRow {
@@ -68,7 +69,7 @@ class FakeStatement {
   async run(): Promise<{ success: true; meta: { changes: number } }> {
     const normalized = this.sql.replace(/\s+/g, ' ').trim();
     if (normalized.startsWith('INSERT INTO events')) {
-      const [source, event, anon_id, version, ts, country, meta] = this.bindings as [
+      const [source, event, anon_id, version, ts, country, meta, tier] = this.bindings as [
         string,
         string,
         string,
@@ -76,8 +77,9 @@ class FakeStatement {
         number,
         string | null,
         string | null,
+        number,
       ];
-      this.db.rows.push({ source, event, anon_id, version, ts, country, meta });
+      this.db.rows.push({ source, event, anon_id, version, ts, country, meta, tier: tier ?? 1 });
       return { success: true, meta: { changes: 1 } };
     }
     if (normalized === 'DELETE FROM events WHERE anon_id = ?') {
@@ -178,9 +180,20 @@ export function buildApp(env: Env) {
 
 export function makeEvent(overrides: Partial<Record<string, unknown>> = {}) {
   return {
+    tier: 1,
     source: 'devtools',
     event: 'panel_open',
     anon_id: '00000000-0000-4000-8000-000000000000',
+    version: '0.1.14',
+    ts: Date.now(),
+    ...overrides,
+  };
+}
+
+export function makeTier0Event(overrides: Partial<Record<string, unknown>> = {}) {
+  return {
+    tier: 0,
+    source: 'devtools',
     version: '0.1.14',
     ts: Date.now(),
     ...overrides,

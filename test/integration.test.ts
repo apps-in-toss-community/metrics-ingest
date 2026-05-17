@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import worker from '../src/index.js';
 import type { Env } from '../src/lib/env.js';
 import { checkRateLimitD1, RATE_LIMIT_PER_MINUTE } from '../src/lib/ratelimit.js';
-import { buildApp, FakeD1, FakeKV, makeEvent } from './helpers.js';
+import { buildApp, FakeD1, FakeKV, makeEvent, makeTier0Event } from './helpers.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
@@ -39,6 +39,7 @@ describe('POST /e', () => {
       source: 'devtools',
       event: 'panel_open',
       anon_id: '00000000-0000-4000-8000-000000000000',
+      tier: 1,
     });
   });
 
@@ -62,7 +63,7 @@ describe('POST /e', () => {
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ ok: true });
     expect(db.rows).toHaveLength(1);
-    expect(db.rows[0]).toMatchObject({ source: 'console-cli', event: 'cli_invoked' });
+    expect(db.rows[0]).toMatchObject({ source: 'console-cli', event: 'cli_invoked', tier: 1 });
   });
 
   it('accepts console-cli cli_install event', async () => {
@@ -76,7 +77,7 @@ describe('POST /e', () => {
     expect(res.status).toBe(202);
     expect(await res.json()).toEqual({ ok: true });
     expect(db.rows).toHaveLength(1);
-    expect(db.rows[0]).toMatchObject({ source: 'console-cli', event: 'cli_install' });
+    expect(db.rows[0]).toMatchObject({ source: 'console-cli', event: 'cli_install', tier: 1 });
   });
 
   it('rejects console-cli event not in its allowlist', async () => {
@@ -191,6 +192,7 @@ describe('scheduled (cron retention sweep)', () => {
         ts: now - 100 * MS_PER_DAY,
         country: null,
         meta: null,
+        tier: 1,
       },
       {
         source: 'devtools',
@@ -200,6 +202,7 @@ describe('scheduled (cron retention sweep)', () => {
         ts: now - 30 * MS_PER_DAY,
         country: null,
         meta: null,
+        tier: 1,
       },
       {
         source: 'devtools',
@@ -209,6 +212,7 @@ describe('scheduled (cron retention sweep)', () => {
         ts: now,
         country: null,
         meta: null,
+        tier: 1,
       },
     );
 
@@ -316,6 +320,136 @@ describe('D1 rate-limit backend', () => {
     expect(overflow.status).toBe(429);
     // KV store must be untouched when D1 backend is active.
     expect(kvStore.size).toBe(0);
+  });
+});
+
+describe('Tier 0 — daily ping', () => {
+  it('accepts a well-formed Tier 0 payload and writes one row', async () => {
+    const res = await postEvent(makeTier0Event());
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+    expect(db.rows[0]).toMatchObject({
+      source: 'devtools',
+      event: 'daily_ping',
+      anon_id: 'tier0',
+      tier: 0,
+    });
+  });
+
+  it('dedupes: second Tier 0 from same IP+UA returns 202 deduped:true, no extra DB row', async () => {
+    const ip = '203.0.113.50';
+    const first = await postEvent(makeTier0Event(), ip);
+    expect(first.status).toBe(202);
+    expect(await first.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+
+    const second = await postEvent(makeTier0Event(), ip);
+    expect(second.status).toBe(202);
+    expect(await second.json()).toEqual({ ok: true, deduped: true });
+    // DB row count must not increase.
+    expect(db.rows).toHaveLength(1);
+  });
+
+  it('rejects Tier 0 payload that includes anon_id (strict schema)', async () => {
+    const res = await postEvent({
+      tier: 0,
+      source: 'devtools',
+      version: '0.1.14',
+      ts: Date.now(),
+      anon_id: '00000000-0000-4000-8000-000000000000',
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_payload' });
+    expect(db.rows).toHaveLength(0);
+  });
+
+  it('rejects Tier 0 payload that includes meta (strict schema)', async () => {
+    const res = await postEvent({
+      tier: 0,
+      source: 'devtools',
+      version: '0.1.14',
+      ts: Date.now(),
+      meta: { foo: 'bar' },
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_payload' });
+    expect(db.rows).toHaveLength(0);
+  });
+
+  it('rejects Tier 0 payload that includes event (strict schema)', async () => {
+    const res = await postEvent({
+      tier: 0,
+      source: 'devtools',
+      version: '0.1.14',
+      ts: Date.now(),
+      event: 'panel_open',
+    });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_payload' });
+    expect(db.rows).toHaveLength(0);
+  });
+
+  it('accepts agent-plugin Tier 0 daily ping', async () => {
+    const res = await postEvent(makeTier0Event({ source: 'agent-plugin' }));
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+    expect(db.rows[0]).toMatchObject({
+      source: 'agent-plugin',
+      event: 'daily_ping',
+      anon_id: 'tier0',
+      tier: 0,
+    });
+  });
+
+  it('dedupes agent-plugin Tier 0 independently from devtools', async () => {
+    const ip = '203.0.113.60';
+    // devtools ping
+    const r1 = await postEvent(makeTier0Event({ source: 'devtools' }), ip);
+    expect(r1.status).toBe(202);
+    expect(await r1.json()).toEqual({ ok: true });
+
+    // agent-plugin ping — different source, different KV key, not a dupe
+    const r2 = await postEvent(makeTier0Event({ source: 'agent-plugin' }), ip);
+    expect(r2.status).toBe(202);
+    expect(await r2.json()).toEqual({ ok: true });
+
+    expect(db.rows).toHaveLength(2);
+  });
+});
+
+describe('Tier 1 — opt-in event stream', () => {
+  it('accepts agent-plugin Tier 1 skill_invoked', async () => {
+    const res = await postEvent(
+      makeEvent({ source: 'agent-plugin', event: 'skill_invoked', meta: { skill: 'deploy' } }),
+    );
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+    expect(db.rows[0]).toMatchObject({ source: 'agent-plugin', event: 'skill_invoked', tier: 1 });
+  });
+
+  it('rejects agent-plugin Tier 1 event not in allowlist', async () => {
+    const res = await postEvent(makeEvent({ source: 'agent-plugin', event: 'unknown_event' }));
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'invalid_payload' });
+    expect(db.rows).toHaveLength(0);
+  });
+
+  it('treats legacy payload (no tier field) as Tier 1', async () => {
+    const legacyPayload = {
+      source: 'devtools',
+      event: 'panel_open',
+      anon_id: '00000000-0000-4000-8000-000000000000',
+      version: '0.1.0',
+      ts: Date.now(),
+    };
+    const res = await postEvent(legacyPayload);
+    expect(res.status).toBe(202);
+    expect(await res.json()).toEqual({ ok: true });
+    expect(db.rows).toHaveLength(1);
+    expect(db.rows[0]).toMatchObject({ tier: 1 });
   });
 });
 
