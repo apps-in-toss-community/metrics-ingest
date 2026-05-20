@@ -100,7 +100,7 @@ Worker는 발신 국가(Cloudflare의 `cf.country`, 두 글자 코드)도 함께
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/stats` | 읽기 전용 일간 요약 (건수 및 날짜만 — 인증 없음, PII 없음). 일간 cron이 최소 한 번 실행되기 전까지 `503` 반환. |
 
-`POST`/`DELETE /e`는 IP당 분당 60회로 rate-limit이 적용됩니다(KV 기반).
+`POST`/`DELETE /e`는 IP당 분당 60회로 rate-limit이 적용됩니다. 백엔드는 `RATE_LIMIT_BACKEND`로 선택합니다 — `kv`(기본, eventual consistency) 또는 `d1`(atomic UPSERT, strong consistency).
 
 매일 cron(03:00 UTC)이 보존 기간이 지난 row를 삭제하고, 당일 row 수를 14일 rolling 히스토리에 기록합니다. `DAILY_ROW_THRESHOLD`를 초과하면 에러 로그를 남기고 선택적으로 `ABUSE_ALERT_WEBHOOK`에 POST합니다. `GET /stats`가 반환하는 것이 바로 이 최신 요약입니다.
 
@@ -108,7 +108,7 @@ Worker는 발신 국가(Cloudflare의 `cf.country`, 두 글자 코드)도 함께
 
 - Cloudflare Workers
 - Hono 4
-- Cloudflare D1 (이벤트) + KV (rate limit 상태 + Tier 0 dedupe)
+- Cloudflare D1 (이벤트, 선택적 rate limit 상태) + KV (Tier 0 dedupe, 기본 rate limit 상태)
 - TypeScript strict, Biome, vitest, pnpm 10.33.0
 
 ## 로컬 개발

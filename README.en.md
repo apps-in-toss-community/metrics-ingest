@@ -100,7 +100,7 @@ Privacy details: <https://docs.aitc.dev/privacy>
 | `GET` | `/health` | Liveness probe |
 | `GET` | `/stats` | Read-only daily summary (counts and dates only — no auth, no PII). `503` until the daily cron has run at least once. |
 
-`POST`/`DELETE /e` are rate-limited to 60 requests/minute per IP (KV-backed).
+`POST`/`DELETE /e` are rate-limited to 60 requests/minute per IP. The backend is selected via `RATE_LIMIT_BACKEND` — `kv` (default, eventual consistency) or `d1` (atomic UPSERT, strong consistency).
 
 A daily cron (03:00 UTC) sweeps rows older than the retention window and records that day's row count in a rolling 14-day history; if the count exceeds `DAILY_ROW_THRESHOLD` it logs an error and (optionally) POSTs to `ABUSE_ALERT_WEBHOOK`. The latest summary is what `GET /stats` returns.
 
@@ -108,7 +108,7 @@ A daily cron (03:00 UTC) sweeps rows older than the retention window and records
 
 - Cloudflare Workers
 - Hono 4
-- Cloudflare D1 (events) + KV (rate limit state + Tier 0 dedupe)
+- Cloudflare D1 (events, optional rate limit state) + KV (Tier 0 dedupe, default rate limit state)
 - TypeScript strict, Biome, vitest, pnpm 10.33.0
 
 ## Local development
