@@ -152,3 +152,4 @@ vite.config.ts.timestamp-*
 .claude/settings.local.json
 .claude/*.lock
 .claude.lock
+.claude/worktrees/
