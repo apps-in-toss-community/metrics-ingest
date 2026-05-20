@@ -45,11 +45,6 @@
     "community"
   ],
   "packageManager": "pnpm@10.33.0",
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "workerd"
-    ]
-  },
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",
