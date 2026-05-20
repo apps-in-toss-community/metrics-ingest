@@ -1,18 +1,19 @@
 /**
  * Per-IP rate limit with two backends, selected at runtime via env var
- * RATE_LIMIT_BACKEND ('kv' | 'd1', default 'kv').
+ * RATE_LIMIT_BACKEND ('kv' | 'd1'). Both staging and production deploy with
+ * 'd1' (see wrangler.toml); 'kv' is the code-level fallback when the var is
+ * unset.
  *
- * ### KV backend (default)
- * key = `rl:<ip>:<minute-epoch>`, value = count. TTL 120s for auto-cleanup.
- * Eventually consistent — within ~1s stale reads are possible, so parallel
- * bursts can exceed the limit slightly. Acceptable for opt-in telemetry.
- *
- * ### D1 backend
+ * ### D1 backend (deployed)
  * Atomic `INSERT OR REPLACE` with per-row `count` in the `rate_limit` table.
  * D1 serialises writes per row (single-writer model), so concurrent requests
  * for the same IP+bucket see the true running total. Latency is ~1–2 ms
- * higher than KV. Enable in staging via RATE_LIMIT_BACKEND=d1 before
- * switching production.
+ * higher than KV.
+ *
+ * ### KV backend (fallback)
+ * key = `rl:<ip>:<minute-epoch>`, value = count. TTL 120s for auto-cleanup.
+ * Eventually consistent — within ~1s stale reads are possible, so parallel
+ * bursts can exceed the limit slightly. Acceptable for opt-in telemetry.
  */
 
 const LIMIT = 60;
