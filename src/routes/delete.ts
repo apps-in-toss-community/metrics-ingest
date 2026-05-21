@@ -10,7 +10,13 @@ function clientIp(c: Context): string {
 
 export const deleteRoute = new Hono<{ Bindings: Env }>().delete('/', async (c) => {
   const ip = clientIp(c);
-  const rl = await checkRateLimit(c.env.RATELIMIT_KV, ip);
+  const rl = await checkRateLimit(
+    c.env.RATELIMIT_KV,
+    ip,
+    undefined,
+    c.env.EVENTS_DB,
+    c.env.RATE_LIMIT_BACKEND,
+  );
   if (!rl.ok) {
     return c.json({ error: 'rate_limited' }, 429);
   }
