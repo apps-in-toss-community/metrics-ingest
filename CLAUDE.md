@@ -17,7 +17,7 @@
 
 ## 프로젝트 개요
 
-**metrics-ingest** — 커뮤니티 dev 도구의 **익명 다층 동의**(Tier 0 opt-out·기본 ON / Tier 1 opt-in·기본 OFF) 사용 텔레메트리를 받는 Cloudflare Workers 엔드포인트. 초기 source는 `@ait-co/devtools` 한 도구이지만, 향후 `console-cli` / `agent-plugin` 등이 같은 엔드포인트로 모인다.
+**metrics-ingest** — 커뮤니티 dev 도구의 **익명 다층 동의**(Tier 0 opt-out·기본 ON / Tier 1 opt-in·기본 OFF) 사용 텔레메트리를 받는 Cloudflare Workers 엔드포인트. source는 `@ait-co/devtools`·`console-cli`·`agent-plugin` 세 도구가 같은 엔드포인트로 모인다 (allowlist: `src/lib/schema.ts`의 `SOURCES` 상수).
 
 **존재 이유**: "1.0.0 cut 시점은 다운로드 수가 아니라 실제 활성 사용자 확보"라는 정책의 신호원. 봇/CI 노이즈가 없어 신호 품질이 높다.
 
