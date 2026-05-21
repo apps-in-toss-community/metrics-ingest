@@ -1,4 +1,5 @@
 import { type Context, Hono } from 'hono';
+import { utcDateString } from '../lib/anti-abuse.js';
 import { FALLBACK_SECRET, tier0DedupeKey, tryReserveTier0 } from '../lib/dedupe.js';
 import type { Env } from '../lib/env.js';
 import { checkRateLimit } from '../lib/ratelimit.js';
@@ -18,10 +19,6 @@ function country(c: Context): string | null {
   // Hono types Cloudflare's `request.cf` loosely; cast narrowly.
   const cf = (c.req.raw as Request & { cf?: { country?: string } }).cf;
   return cf?.country ?? null;
-}
-
-function utcDateString(now: number): string {
-  return new Date(now).toISOString().slice(0, 10); // 'YYYY-MM-DD'
 }
 
 export const ingestRoute = new Hono<{ Bindings: Env }>().post('/', async (c) => {
