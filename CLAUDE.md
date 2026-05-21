@@ -17,9 +17,9 @@
 
 ## 프로젝트 개요
 
-**metrics-ingest** — 커뮤니티 dev 도구의 **익명 opt-in** 사용 텔레메트리를 받는 Cloudflare Workers 엔드포인트. 초기 source는 `@ait-co/devtools` 한 도구이지만, 향후 `console-cli` / `agent-plugin` 등이 같은 엔드포인트로 모인다.
+**metrics-ingest** — 커뮤니티 dev 도구의 **익명 다층 동의**(Tier 0 opt-out·기본 ON / Tier 1 opt-in·기본 OFF) 사용 텔레메트리를 받는 Cloudflare Workers 엔드포인트. 초기 source는 `@ait-co/devtools` 한 도구이지만, 향후 `console-cli` / `agent-plugin` 등이 같은 엔드포인트로 모인다.
 
-**존재 이유**: "1.0.0 cut 시점은 다운로드 수가 아니라 실제 활성 사용자 확보"라는 정책의 신호원. opt-in이라 표본은 작지만 봇/CI 노이즈가 없어 신호 품질이 높다.
+**존재 이유**: "1.0.0 cut 시점은 다운로드 수가 아니라 실제 활성 사용자 확보"라는 정책의 신호원. 봇/CI 노이즈가 없어 신호 품질이 높다.
 
 ## 데이터 정책 (변경 시 외부 공개 페이지 동반 갱신)
 
@@ -32,7 +32,7 @@
 | 국가 | Cloudflare `cf.country` 2-letter code만 (Tier 0 / Tier 1 모두) |
 | 보존 기간 | 90일. 매일 03:00 UTC cron이 `ts < now - 90d` row DELETE |
 | 삭제 요청 | `DELETE /e?anon_id=<uuid>` 사용자가 패널에서 직접 호출 가능 (Tier 1만 해당). Tier 0는 저장 식별자 없어 삭제 불필요 |
-| Rate limit | 60 req/min per IP. Backend: `RATE_LIMIT_BACKEND=kv` (default, eventual consistency) or `d1` (atomic UPSERT, strong consistency). KV default kept; staging validates D1 before production switch. |
+| Rate limit | 60 req/min per IP. Backend: `RATE_LIMIT_BACKEND` — `kv` (eventual consistency) or `d1` (atomic UPSERT, strong consistency). `wrangler.toml`은 staging·production 모두 `d1`로 설정 (2026-05-13 staging 검증, PR #5). |
 | Tier 0 dedupe | KV `t0:<source>:<16-char-hash>:<YYYY-MM-DD>` 36h TTL. 하루 1회만 DB write. `RATELIMIT_KV` 재사용 (`t0:` prefix로 충돌 회피) |
 | `source` allowlist | `['devtools', 'console-cli', 'agent-plugin']`. 새 도구 추가는 별도 PR로 allowlist 확장 |
 | 일일 row-count 모니터링 | 같은 03:00 UTC cron이 당일(UTC) row 수 집계 → KV `abuse:history`에 14일 rolling 저장. `DAILY_ROW_THRESHOLD` (staging 5k / prod 50k) 초과 시 `console.error` + 선택적 webhook POST (`ABUSE_ALERT_WEBHOOK`). 개수·날짜만 — PII 없음 |
