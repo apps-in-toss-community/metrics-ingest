@@ -120,5 +120,5 @@ migrations/
 ## 외부 정책 참조
 
 - umbrella `CLAUDE.md`: `apps-in-toss-community/umbrella/CLAUDE.md` (organization 단위 공통 정책)
-- umbrella `TODO.md`: 항목 추가/완료는 umbrella TODO가 single source of truth. sub-repo TODO 안 둠.
+- 작업 추적: 조직 작업 항목은 GitHub Project [`harness roadmap`](https://github.com/orgs/apps-in-toss-community/projects/1)이 single source of truth. 작업은 해당 repo의 issue(라벨 `roadmap`)로 만들어 Project에 등재한다. sub-repo `TODO.md` 안 둠.
 - 데이터 정책 외부 정본: `docs.aitc.dev/privacy` (docs repo `apps-in-toss-community/docs`)
