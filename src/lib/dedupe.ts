@@ -50,8 +50,17 @@ export async function tier0DedupeKey(
 /**
  * Attempts to reserve a Tier 0 dedupe slot for today.
  *
- * @returns `true`  — first ping today; caller should write to D1.
- *          `false` — duplicate; caller should respond 202 deduped, skip D1.
+ * **At-most-once guarantee is best-effort / approximate.**
+ * Workers KV is eventually consistent: a narrow concurrent-write window exists
+ * where two requests for the same client-day can both observe `null` from
+ * `kv.get` before either `kv.put` completes, causing both to return `true` and
+ * write to D1. Workers KV has no atomic compare-and-set primitive, so this
+ * race cannot be eliminated without a Durable Object or D1 transaction.
+ * For anonymous best-effort telemetry dedupe the rare duplicate is acceptable —
+ * do not rely on this function for exact once-per-day enforcement.
+ *
+ * @returns `true`  — first ping today (or rare concurrent duplicate); caller should write to D1.
+ *          `false` — duplicate confirmed; caller should respond 202 deduped, skip D1.
  */
 export async function tryReserveTier0(kv: KVNamespace, key: string): Promise<boolean> {
   const existing = await kv.get(key);
