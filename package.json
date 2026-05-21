@@ -1,7 +1,7 @@
 {
   "name": "metrics-ingest",
   "version": "0.0.0",
-  "description": "Anonymous, opt-in usage telemetry endpoint for apps-in-toss-community dev tools",
+  "description": "Anonymous, tiered-consent usage telemetry endpoint for apps-in-toss-community dev tools (Tier 0 opt-out, Tier 1 opt-in)",
   "type": "module",
   "private": true,
   "engines": {
