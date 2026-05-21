@@ -66,6 +66,13 @@ export const ingestRoute = new Hono<{ Bindings: Env }>().post('/', async (c) => 
 
     const dateUtc = utcDateString(now);
     const secretBase = c.env.TIER0_SECRET_BASE ?? FALLBACK_SECRET;
+    if (!c.env.TIER0_SECRET_BASE) {
+      console.error(
+        '[metrics-ingest] TIER0_SECRET_BASE is not configured — using insecure fallback secret. ' +
+          'Set the secret via `wrangler secret put TIER0_SECRET_BASE --env <staging|production>` ' +
+          'to prevent pre-computation of dedupe keys.',
+      );
+    }
     const ua = clientUa(c);
     const dedupeKey = await tier0DedupeKey(secretBase, source, ip, ua, dateUtc);
     const reserved = await tryReserveTier0(c.env.RATELIMIT_KV, dedupeKey);
