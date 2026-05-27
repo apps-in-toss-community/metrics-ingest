@@ -153,3 +153,4 @@ vite.config.ts.timestamp-*
 .claude/*.lock
 .claude.lock
 .claude/worktrees/
+.codegraph/
