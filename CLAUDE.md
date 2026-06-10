@@ -98,11 +98,14 @@ src/
 ├── routes/
 │   ├── ingest.ts     # POST /e (validation + rate limit + D1 insert)
 │   ├── delete.ts     # DELETE /e?anon_id=...
-│   └── health.ts     # GET /health
+│   ├── health.ts     # GET /health
+│   └── stats.ts      # GET /stats — 일별 anti-abuse 스냅샷 read-only (인증 불필요)
 ├── lib/
 │   ├── ratelimit.ts  # KV per-IP rate limit
 │   ├── schema.ts     # zod payload schema + SOURCES allowlist
-│   └── env.ts        # Worker env binding types
+│   ├── env.ts        # Worker env binding types
+│   ├── anti-abuse.ts # 일일 row-count 임계 모니터링 + 14일 KV 히스토리 (cron 03:00 UTC)
+│   └── dedupe.ts     # Tier 0 IP+UA 일별 dedupe (KV best-effort, t0: 접두사)
 └── __tests__/        # vitest
 
 migrations/
