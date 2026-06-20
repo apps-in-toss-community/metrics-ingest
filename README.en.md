@@ -2,6 +2,33 @@
 
 [한국어](./README.md) · **English**
 
+## Service discontinued
+
+This service has been discontinued. The organization decided to fully remove telemetry code (sender code removed from devtools #624, console-cli #193, and agent-plugin #123), so there is no data left to collect. If reintroduced, it will be implemented fresh with a consistent design. This repository is preserved for reference and is no longer deployed or operated.
+
+### Operator teardown
+
+Manual steps for the operator with wrangler credentials (Dave):
+
+```bash
+# Delete Workers
+wrangler delete --env staging
+wrangler delete --env production
+
+# Delete D1 databases
+wrangler d1 delete aitc-metrics-staging
+wrangler d1 delete aitc-metrics
+
+# Delete KV namespaces (RATELIMIT_KV from wrangler.toml)
+# staging id: 8fdfd6c07c254e10aaea4d325441f089
+wrangler kv namespace delete --namespace-id 8fdfd6c07c254e10aaea4d325441f089
+# production id: 54253b7fde5141bcb9c583f69312e891
+wrangler kv namespace delete --namespace-id 54253b7fde5141bcb9c583f69312e891
+
+# DNS routes cleanup (manual via Cloudflare dashboard)
+# Remove t-staging.aitc.dev and t.aitc.dev custom domains
+```
+
 Anonymous usage telemetry endpoint for [apps-in-toss-community](https://github.com/apps-in-toss-community) dev tools.
 
 ## What this is
@@ -130,7 +157,9 @@ git config core.hooksPath .githooks
 
 ## Deployment
 
-This repo is deployed to two Cloudflare environments:
+Automatic deployment has been disabled (push trigger removed from deploy.yml due to service discontinuation).
+
+This repo was deployed to two Cloudflare environments:
 
 - `staging` — internal verification
 - `production` — public endpoint `https://t.aitc.dev/e`

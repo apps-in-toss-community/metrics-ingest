@@ -1,8 +1,10 @@
+# DEPRECATED: This service has been discontinued (telemetry senders removed from
+# devtools #624, console-cli #193, agent-plugin #123). Automatic deployment on
+# push has been disabled. Only manual workflow_dispatch remains for operator use
+# (e.g. teardown steps). See README.md for full context.
 name: Deploy
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
     inputs:
       environment:
@@ -21,43 +23,8 @@ permissions:
   contents: read
 
 jobs:
-  deploy-staging:
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    environment:
-      name: staging
-      url: https://t-staging.aitc.dev/health
-    steps:
-      - uses: actions/checkout@v6
-
-      - uses: pnpm/action-setup@v6
-
-      - uses: actions/setup-node@v6
-        with:
-          node-version-file: '.nvmrc'
-          cache: pnpm
-
-      - run: pnpm install --frozen-lockfile
-
-      - uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deploy --env staging
-
-      # Bot Fight Mode on the aitc.dev zone 403s GitHub Actions runner IPs, so a
-      # public curl against t-staging.aitc.dev/health can't work from CI. Verify
-      # the deploy landed via the Workers API instead (the upload above already
-      # succeeded; this confirms it's the active deployment).
-      - name: Verify deployment
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: deployments list --env staging
-
   deploy-production:
-    if: github.event_name == 'workflow_dispatch' && github.event.inputs.environment == 'production'
+    if: github.event.inputs.environment == 'production'
     runs-on: ubuntu-latest
     environment:
       name: production

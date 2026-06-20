@@ -2,6 +2,33 @@
 
 **한국어** · [English](./README.en.md)
 
+## 서비스 종료됨
+
+이 서비스는 종료됐습니다. 조직 차원에서 telemetry 코드를 전면 제거하기로 결정(devtools #624, console-cli #193, agent-plugin #123에서 발신 코드 제거)했기 때문에 더 이상 수집할 데이터가 없습니다. 재도입이 필요하다면 일관된 설계로 새로 구현할 예정입니다. 이 저장소는 참고용으로 보존되며 더 이상 배포·운영되지 않습니다.
+
+### 운영자 teardown
+
+wrangler 자격증명(Dave)이 있는 운영자가 수동으로 실행:
+
+```bash
+# Worker 삭제
+wrangler delete --env staging
+wrangler delete --env production
+
+# D1 데이터베이스 삭제
+wrangler d1 delete aitc-metrics-staging
+wrangler d1 delete aitc-metrics
+
+# KV 네임스페이스 삭제 (wrangler.toml의 RATELIMIT_KV)
+# staging id: 8fdfd6c07c254e10aaea4d325441f089
+wrangler kv namespace delete --namespace-id 8fdfd6c07c254e10aaea4d325441f089
+# production id: 54253b7fde5141bcb9c583f69312e891
+wrangler kv namespace delete --namespace-id 54253b7fde5141bcb9c583f69312e891
+
+# DNS 라우트 정리 (Cloudflare 대시보드에서 수동)
+# t-staging.aitc.dev, t.aitc.dev custom domain 제거
+```
+
 [apps-in-toss-community](https://github.com/apps-in-toss-community) 개발 도구를 위한 익명 사용 텔레메트리 엔드포인트입니다.
 
 ## 이게 뭔가요
@@ -130,7 +157,9 @@ git config core.hooksPath .githooks
 
 ## 배포
 
-이 저장소는 두 개의 Cloudflare 환경으로 배포됩니다:
+자동 배포는 비활성화됐습니다 (서비스 종료로 인해 deploy.yml에서 push 트리거 제거).
+
+이 저장소는 두 개의 Cloudflare 환경으로 배포됐습니다:
 
 - `staging` — 내부 검증
 - `production` — 공개 엔드포인트 `https://t.aitc.dev/e`

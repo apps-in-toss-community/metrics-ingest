@@ -1,5 +1,7 @@
 # CLAUDE.md
 
+**이 서비스는 폐기됐습니다.** 조직 차원의 telemetry 전면 제거 결정(devtools #624, console-cli #193, agent-plugin #123)으로 자동 배포가 비활성화됐습니다. 저장소는 참고용으로 보존됩니다.
+
 ## 프로젝트 성격
 
 `apps-in-toss-community`는 토스/앱인토스 팀과 제휴 관계가 없는 커뮤니티 오픈소스 프로젝트다.
