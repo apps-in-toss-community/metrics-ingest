@@ -44,7 +44,7 @@
     "apps-in-toss",
     "community"
   ],
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@11.17.0",
   "license": "BSD-3-Clause",
   "repository": {
     "type": "git",

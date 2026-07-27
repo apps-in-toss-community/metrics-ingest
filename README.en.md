@@ -136,7 +136,7 @@ A daily cron (03:00 UTC) sweeps rows older than the retention window and records
 - Cloudflare Workers
 - Hono 4
 - Cloudflare D1 (events, optional rate limit state) + KV (Tier 0 dedupe, default rate limit state)
-- TypeScript strict, Biome, vitest, pnpm 10.33.0
+- TypeScript strict, Biome, vitest, pnpm 11.17.0
 
 ## Local development
 

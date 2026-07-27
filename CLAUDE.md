@@ -49,7 +49,7 @@
 
 ## 기술 스택
 
-공통: **Node 24 LTS**, **pnpm 10.33.0** (`packageManager` 고정), **TypeScript strict**, **Biome** (lint + formatter, ESLint/Prettier 사용 안 함). Commit message는 **Conventional Commits**.
+공통: **Node 24 LTS**, **pnpm 11.17.0** (`packageManager` 고정), **TypeScript strict**, **Biome** (lint + formatter, ESLint/Prettier 사용 안 함). Commit message는 **Conventional Commits**.
 
 Pre-commit hook은 source-controlled (`.githooks/pre-commit`), contributor가 수동 활성화:
 
