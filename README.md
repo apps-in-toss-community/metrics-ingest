@@ -136,7 +136,7 @@ Worker는 발신 국가(Cloudflare의 `cf.country`, 두 글자 코드)도 함께
 - Cloudflare Workers
 - Hono 4
 - Cloudflare D1 (이벤트, 선택적 rate limit 상태) + KV (Tier 0 dedupe, 기본 rate limit 상태)
-- TypeScript strict, Biome, vitest, pnpm 10.33.0
+- TypeScript strict, Biome, vitest, pnpm 11.17.0
 
 ## 로컬 개발
 
